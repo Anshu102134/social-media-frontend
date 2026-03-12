@@ -1,18 +1,15 @@
-import React, { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../contexts/AuthContext";
+import React, { useState } from "react";
 
 const Search = () => {
     const [name, setName] = useState("");
     const [results, setResults] = useState([]);
-    const { user } = useContext(AuthContext);
-    const navigate = useNavigate();
 
     const handleSearch = async () => {
         if (!name.trim()) return;
 
         try {
             const token = localStorage.getItem("token");
+
             const res = await fetch(
                 `https://social-media-backend-xxgc.onrender.com/api/users/search?q=${encodeURIComponent(name)}`,
                 {
