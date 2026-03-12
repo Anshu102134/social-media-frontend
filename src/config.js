@@ -1,0 +1,1 @@
+export const API_URL = "https://social-media-backend-xxgc.onrender.com"; // your deployed backend URL
