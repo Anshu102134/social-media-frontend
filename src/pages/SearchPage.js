@@ -1,121 +1,101 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const SearchPage = () => {
-    const [searchParams] = useSearchParams();
-    const query = searchParams.get("q");
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get("q");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(null);
 
-    const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [sending, setSending] = useState(null);
-
-    useEffect(() => {
-        if (query) {
-            const fetchResults = async () => {
-                setLoading(true);
-
-                try {
-                    const token = localStorage.getItem("token");
-
-                    const res = await fetch(
-                        `${API_URL}/api/users/search?q=${encodeURIComponent(query)}`,
-                        {
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        }
-                    );
-
-                    const data = await res.json();
-
-                    if (Array.isArray(data)) {
-                        setResults(data);
-                    } else if (data.users && Array.isArray(data.users)) {
-                        setResults(data.users);
-                    } else {
-                        setResults([]);
-                    }
-
-                } catch (err) {
-                    console.error("Search error:", err);
-                    setResults([]);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchResults();
-        }
-    }, [query]);
-
-    const handleAddFriend = async (receiverId) => {
-        const token = localStorage.getItem("token");
-
-        setSending(receiverId);
-
+  useEffect(() => {
+    if (query) {
+      const fetchResults = async () => {
+        setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/friendRequest/send`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ to: receiverId }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                alert("Friend request sent!");
-            } else {
-                alert(data.message || "Failed to send request");
+          const token = localStorage.getItem("token");
+          const res = await fetch(
+            `http://localhost:5000/api/users/search?q=${encodeURIComponent(query)}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
             }
+          );
 
+          const data = await res.json();
+          if (Array.isArray(data)) setResults(data);
+          else if (data.users && Array.isArray(data.users)) setResults(data.users);
+          else setResults([]);
         } catch (err) {
-            console.error(err);
-            alert("Something went wrong");
+          console.error("Error fetching search results:", err);
+          setResults([]);
         } finally {
-            setSending(null);
+          setLoading(false);
         }
-    };
+      };
 
-    if (!query) return <p>No search query provided.</p>;
-    if (loading) return <p>Loading results...</p>;
+      fetchResults();
+    }
+  }, [query]);
 
-    return (
-        <div className="search-container">
-            <h2>Search Results for "{query}"</h2>
+  const handleAddFriend = async (receiverId) => {
+    const token = localStorage.getItem("token");
+    setSending(receiverId);
+    try {
+      const res = await fetch("http://localhost:5000/api/friendRequest/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+       body: JSON.stringify({ to: receiverId })
+      });
 
-            {results.length === 0 ? (
-                <p>No users found.</p>
-            ) : (
-                results.map((resultUser) => (
-                    <div key={resultUser._id} className="user-card">
-                        <div className="user-info">
-                            <img
-                                src={resultUser.profileImage || "https://via.placeholder.com/40"}
-                                alt={resultUser.name}
-                                width="40"
-                            />
-                            <div>
-                                <h3>{resultUser.name}</h3>
-                                <p>{resultUser.email}</p>
-                            </div>
-                        </div>
+      const data = await res.json();
+      alert(res.ok ? "Friend request sent!" : data.message || "Failed to send");
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setSending(null);
+    }
+  };
 
-                        <button
-                            disabled={sending === resultUser._id}
-                            onClick={() => handleAddFriend(resultUser._id)}
-                        >
-                            {sending === resultUser._id ? "Sending..." : "Add Friend"}
-                        </button>
-                    </div>
-                ))
-            )}
-        </div>
-    );
+  if (!query) return <p className="text-center">No search query provided.</p>;
+  if (loading) return <p className="text-center">Loading results...</p>;
+
+  return (
+    <div className="search-container">
+      <h2 style={{ textAlign: 'center', marginBottom: '16px' }}>
+        Search Results for "{query}"
+      </h2>
+      {results.length === 0 ? (
+        <p style={{ textAlign: 'center', color: '#555' }}>No users found.</p>
+      ) : (
+        results.map((user) => (
+          <div key={user._id} className="user-card">
+            <div className="user-info">
+              <img
+                src={user.profileImage || "https://via.placeholder.com/40"}
+                alt={user.name}
+              />
+              <div>
+                <h3>{user.name}</h3>
+                <p>{user.email}</p>
+              </div>
+            </div>
+            <button
+              className="add-btn"
+              disabled={sending === user._id}
+              onClick={() => handleAddFriend(user._id)}
+            >
+              {sending === user._id ? "Sending..." : "Add Friend"}
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
 };
 
 export default SearchPage;
